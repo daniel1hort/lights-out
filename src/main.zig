@@ -16,6 +16,7 @@ pub fn main() !void {
 
     rl.setTargetFPS(60);
 
+    rg.guiLoadStyle("style_cyber.rgs");
     rg.guiSetStyle(
         rg.GuiControl.default,
         @intFromEnum(rg.GuiDefaultProperty.text_size),
@@ -73,7 +74,7 @@ pub fn main() !void {
             rl.beginDrawing();
             defer rl.endDrawing();
 
-            rl.clearBackground(rl.Color.dark_gray);
+            rl.clearBackground(rl.Color.init(0, 34, 43, 255));
 
             {
                 state.camera.begin();
@@ -91,18 +92,6 @@ pub fn main() !void {
                 rl.Rectangle.init(0, 70, 150, 60),
                 "Play",
             );
-
-
-
-            // const length = rl.measureText("Title", 30);
-            // rl.drawRectangle(0, 0, length + 20, 50, rl.Color.beige);
-            // rl.drawText(
-            //     "Title",
-            //     10,
-            //     10,
-            //     30,
-            //     rl.Color.black,
-            // );
         }
     }
 }
@@ -154,7 +143,7 @@ fn drawMap(state: State) void {
                     State.cell_size.y,
                 ),
                 2,
-                rl.Color.light_gray,
+                rl.Color.init(126, 188, 204, 255),
             );
         }
     }
