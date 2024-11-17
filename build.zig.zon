@@ -1,0 +1,19 @@
+.{
+    .name = "light-out",
+    .version = "0.0.0",
+    //.minimum_zig_version = "0.11.0",
+    .dependencies = .{
+        .@"raylib-zig" = .{
+            .url = "git+https://github.com/Not-Nik/raylib-zig#90109ff8041229ae8b615dca362f646586f20bd3",
+            .hash = "122062d2421175ba6bf89382c86621270e4883f1074ee4cc09da282e231bdef57328",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        // For example...
+        //"LICENSE",
+        //"README.md",
+    },
+}
