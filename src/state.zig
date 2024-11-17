@@ -2,20 +2,23 @@ const std = @import("std");
 const rl = @import("raylib");
 
 pub const CellState = enum { none, off, on };
+pub const Step = enum { design, solve, play };
 const Self = @This();
 
 pub const screen_size = rl.Vector2.init(1280, 720);
 pub const map_size = rl.Vector2.init(20, 20);
 pub const cell_size = rl.Vector2.init(40, 40);
+pub const ui_panel_bounds = rl.Rectangle.init(0, 0, 190, 180);
 
 map: [map_size.x * map_size.y]CellState = undefined,
-
 camera: rl.Camera2D = .{
     .offset = .{ .x = 0, .y = 0 },
     .target = .{ .x = 0, .y = 0 },
     .zoom = 1.0,
     .rotation = 0.0,
 },
+mouse_pos: rl.Vector2 = undefined,
+step: Step = .design,
 
 pub fn withinBounds(self: Self, x: f32, y: f32) bool {
     _ = self;
@@ -31,6 +34,14 @@ pub fn set(self: *Self, x: usize, y: usize, value: CellState) void {
     self.map[self.indexAt(x, y)] = value;
 }
 
-pub fn get(self: Self, x: usize, y: usize) CellState{
+pub fn get(self: Self, x: usize, y: usize) CellState {
     return self.map[self.indexAt(x, y)];
+}
+
+pub fn toggle(self: *Self, x: usize, y: usize) void {
+    switch (self.get(x, y)) {
+        .off => self.set(x, y, .on),
+        .on => self.set(x, y, .off),
+        .none => {},
+    }
 }

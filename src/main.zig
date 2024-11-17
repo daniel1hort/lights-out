@@ -15,7 +15,6 @@ pub fn main() !void {
     defer rl.closeWindow();
 
     rl.setTargetFPS(60);
-
     rg.guiLoadStyle("style_cyber.rgs");
     rg.guiSetStyle(
         rg.GuiControl.default,
@@ -24,6 +23,9 @@ pub fn main() !void {
     );
 
     while (!rl.windowShouldClose()) {
+        state.mouse_pos = rl.getMousePosition();
+        const wheel_move = rl.getMouseWheelMove();
+
         //panning
         if (rl.isMouseButtonDown(.mouse_button_right)) {
             const delta = rl.getMouseDelta().scale(1.0 / state.camera.zoom).negate();
@@ -31,43 +33,14 @@ pub fn main() !void {
         }
 
         //zooming
-        const wheel_move = rl.getMouseWheelMove();
         if (wheel_move != 0) {
-            const mouse_pos = rl.getMousePosition();
-            state.camera.target = rl.getScreenToWorld2D(mouse_pos, state.camera);
-            state.camera.offset = mouse_pos;
+            state.camera.target = rl.getScreenToWorld2D(state.mouse_pos, state.camera);
+            state.camera.offset = state.mouse_pos;
             state.camera.zoom *= if (wheel_move < 0) 0.75 else (1.0 / 0.75);
         }
 
         if (rl.isMouseButtonReleased(.mouse_button_left)) {
-            const pos = rl.getScreenToWorld2D(
-                rl.getMousePosition(),
-                state.camera,
-            );
-
-            const total_size = rl.Vector2.init(
-                State.map_size.x * State.cell_size.x,
-                State.map_size.y * State.cell_size.y,
-            );
-            const origin = rl.Vector2.init(
-                (State.screen_size.x - total_size.x) * 0.5,
-                (State.screen_size.y - total_size.y) * 0.5,
-            );
-
-            const index = pos.subtract(origin).scale(1.0 / State.cell_size.x);
-            if (state.withinBounds(index.x, index.y)) {
-                const x: usize = @intFromFloat(index.x);
-                const y: usize = @intFromFloat(index.y);
-                state.set(
-                    x,
-                    y,
-                    switch (state.get(x, y)) {
-                        .none => .off,
-                        .off => .on,
-                        .on => .none,
-                    },
-                );
-            }
+            onGridClick(&state);
         }
 
         {
@@ -83,15 +56,33 @@ pub fn main() !void {
                 drawMap(state);
             }
 
-            _ = rg.guiButton(
-                rl.Rectangle.init(0, 0, 150, 60),
-                "Solve",
+            _ = rg.guiPanel(
+                State.ui_panel_bounds,
+                null,
             );
 
-            _ = rg.guiButton(
-                rl.Rectangle.init(0, 70, 150, 60),
-                "Play",
-            );
+            if (rg.guiButton(
+                rl.Rectangle.init(20, 20, 150, 60),
+                "Solve",
+            ) != 0) {
+                //state.step = .solve;
+            }
+
+            const play_button_text = switch (state.step) {
+                .design => "Play",
+                .play => "Stop",
+                .solve => "Waiting",
+            };
+            if (rg.guiButton(
+                rl.Rectangle.init(20, 100, 150, 60),
+                play_button_text,
+            ) != 0) {
+                switch (state.step) {
+                    .design => state.step = .play,
+                    .play => state.step = .design,
+                    .solve => {},
+                }
+            }
         }
     }
 }
@@ -111,40 +102,67 @@ fn drawMap(state: State) void {
             const screen_x = origin.x + @as(f32, (@floatFromInt(x))) * State.cell_size.x;
             const screen_y = origin.y + @as(f32, (@floatFromInt(y))) * State.cell_size.y;
 
-            if (state.get(x, y) == .on) {
-                rl.drawRectangleRec(
-                    rl.Rectangle.init(
-                        screen_x,
-                        screen_y,
-                        State.cell_size.x,
-                        State.cell_size.y,
-                    ),
-                    rl.Color.orange,
-                );
-            }
+            const bounds = rl.Rectangle.init(
+                screen_x,
+                screen_y,
+                State.cell_size.x,
+                State.cell_size.y,
+            );
+            const color = switch (state.get(x, y)) {
+                .none => rl.Color.blank,
+                .off => rl.Color.white,
+                .on => rl.Color.orange,
+            };
 
-            if (state.get(x, y) == .off) {
-                rl.drawRectangleRec(
-                    rl.Rectangle.init(
-                        screen_x,
-                        screen_y,
-                        State.cell_size.x,
-                        State.cell_size.y,
-                    ),
-                    rl.Color.white,
-                );
-            }
-
+            rl.drawRectangleRec(bounds, color);
             rl.drawRectangleLinesEx(
-                rl.Rectangle.init(
-                    screen_x,
-                    screen_y,
-                    State.cell_size.x,
-                    State.cell_size.y,
-                ),
+                bounds,
                 2,
                 rl.Color.init(126, 188, 204, 255),
             );
+        }
+    }
+}
+
+fn onGridClick(state: *State) void {
+    const pos = rl.getScreenToWorld2D(
+        state.mouse_pos,
+        state.camera,
+    );
+
+    const total_size = rl.Vector2.init(
+        State.map_size.x * State.cell_size.x,
+        State.map_size.y * State.cell_size.y,
+    );
+    const origin = rl.Vector2.init(
+        (State.screen_size.x - total_size.x) * 0.5,
+        (State.screen_size.y - total_size.y) * 0.5,
+    );
+
+    const index = pos.subtract(origin).scale(1.0 / State.cell_size.x);
+    const over_panel = rl.checkCollisionPointRec(state.mouse_pos, State.ui_panel_bounds);
+    if (state.withinBounds(index.x, index.y) and !over_panel) {
+        const x: usize = @intFromFloat(index.x);
+        const y: usize = @intFromFloat(index.y);
+        switch (state.step) {
+            .design => {
+                const next_state: State.CellState = switch (state.get(x, y)) {
+                    .none => .off,
+                    .off => .on,
+                    .on => .none,
+                };
+                state.set(x, y, next_state);
+            },
+            .play => {
+                if (state.get(x, y) != .none) {
+                    state.toggle(x, y);
+                    state.toggle(x - 1, y);
+                    state.toggle(x, y - 1);
+                    state.toggle(x + 1, y);
+                    state.toggle(x, y + 1);
+                }
+            },
+            .solve => {},
         }
     }
 }
