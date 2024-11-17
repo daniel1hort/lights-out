@@ -4,6 +4,7 @@ const rg = @import("raygui");
 const State = @import("state.zig");
 
 pub fn main() !void {
+    const allocator = std.heap.page_allocator;
     var state: State = .{};
     @memset(&state.map, .none);
 
@@ -65,7 +66,9 @@ pub fn main() !void {
                 rl.Rectangle.init(20, 20, 150, 60),
                 "Solve",
             ) != 0) {
-                //state.step = .solve;
+                state.step = .solve;
+                // maybe open a new thread in here
+                try solve(&state, allocator);
             }
 
             const play_button_text = switch (state.step) {
@@ -164,5 +167,25 @@ fn onGridClick(state: *State) void {
             },
             .solve => {},
         }
+    }
+}
+
+fn solve(state: *State, allocator: std.mem.Allocator) !void {
+    var cells = std.ArrayList(State.Cell).init(allocator);
+    for (0..State.map_size.y) |y| {
+        for (0..State.map_size.x) |x| {
+            const cell_state = state.get(x, y);
+            if (cell_state != .none) {
+                try cells.append(.{
+                    .state = cell_state,
+                    .x = x,
+                    .y = y,
+                });
+            }
+        }
+    }
+
+    for (cells.items) |cell| {
+        std.debug.print("{d} {d} {}\n", .{ cell.x, cell.y, cell.state });
     }
 }

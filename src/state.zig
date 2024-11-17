@@ -3,6 +3,11 @@ const rl = @import("raylib");
 
 pub const CellState = enum { none, off, on };
 pub const Step = enum { design, solve, play };
+pub const Cell = struct {
+    x: usize,
+    y: usize,
+    state: CellState,
+};
 const Self = @This();
 
 pub const screen_size = rl.Vector2.init(1280, 720);
