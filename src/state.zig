@@ -24,6 +24,7 @@ camera: rl.Camera2D = .{
 },
 mouse_pos: rl.Vector2 = undefined,
 step: Step = .design,
+highlights: ?[]Cell = null,
 
 pub fn withinBounds(self: Self, x: f32, y: f32) bool {
     _ = self;
@@ -49,4 +50,16 @@ pub fn toggle(self: *Self, x: usize, y: usize) void {
         .on => self.set(x, y, .off),
         .none => {},
     }
+}
+
+pub fn isHighlighted(self: Self, x: usize, y: usize) bool {
+    if(self.highlights) |highlights| {
+        for(highlights) |cell|{
+            if(cell.x == x and cell.y == y)
+                return true;
+        }
+    } else {
+        return false;
+    }
+    return false;
 }

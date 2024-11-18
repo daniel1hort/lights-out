@@ -67,10 +67,10 @@ pub fn main() !void {
                 "Solve",
             ) != 0) {
                 state.step = .solve;
-                // maybe open a new thread in here
-                const sol = try solve(&state, allocator);
-                allocator.free(sol);
-                state.step = .design;
+                if (state.highlights) |highlights|
+                    allocator.free(highlights);
+                state.highlights = try solve(&state, allocator);
+                state.step = .play;
             }
 
             const play_button_text = switch (state.step) {
@@ -89,6 +89,10 @@ pub fn main() !void {
                 }
             }
         }
+    }
+
+    if(state.highlights) |highlights|{
+        allocator.free(highlights);
     }
 }
 
@@ -125,6 +129,15 @@ fn drawMap(state: State) void {
                 2,
                 rl.Color.init(126, 188, 204, 255),
             );
+
+            if (state.isHighlighted(x, y)) {
+                rl.drawCircle(
+                    @intFromFloat(screen_x + State.cell_size.x * 0.5),
+                    @intFromFloat(screen_y + State.cell_size.y * 0.5),
+                    5,
+                    rl.Color.red,
+                );
+            }
         }
     }
 }
@@ -173,7 +186,7 @@ fn onGridClick(state: *State) void {
 }
 
 //TODO(dani): cleanup
-fn solve(state: *State, allocator: std.mem.Allocator) ![]u1 {
+fn solve(state: *State, allocator: std.mem.Allocator) ![]State.Cell {
     var cells = std.ArrayList(State.Cell).init(allocator);
     defer cells.deinit();
     for (0..State.map_size.y) |y| {
@@ -326,5 +339,10 @@ fn solve(state: *State, allocator: std.mem.Allocator) ![]u1 {
         }
     }
 
-    return best_sol;
+    var cells_to_press = std.ArrayList(State.Cell).init(allocator);
+    for (0..n) |index| {
+        if (best_sol[index] == 1)
+            try cells_to_press.append(cells.items[index]);
+    }
+    return cells_to_press.toOwnedSlice();
 }
