@@ -68,7 +68,9 @@ pub fn main() !void {
             ) != 0) {
                 state.step = .solve;
                 // maybe open a new thread in here
-                try solve(&state, allocator);
+                const sol = try solve(&state, allocator);
+                allocator.free(sol);
+                state.step = .design;
             }
 
             const play_button_text = switch (state.step) {
@@ -170,8 +172,10 @@ fn onGridClick(state: *State) void {
     }
 }
 
-fn solve(state: *State, allocator: std.mem.Allocator) !void {
+//TODO(dani): cleanup
+fn solve(state: *State, allocator: std.mem.Allocator) ![]u1 {
     var cells = std.ArrayList(State.Cell).init(allocator);
+    defer cells.deinit();
     for (0..State.map_size.y) |y| {
         for (0..State.map_size.x) |x| {
             const cell_state = state.get(x, y);
@@ -185,7 +189,142 @@ fn solve(state: *State, allocator: std.mem.Allocator) !void {
         }
     }
 
-    for (cells.items) |cell| {
-        std.debug.print("{d} {d} {}\n", .{ cell.x, cell.y, cell.state });
+    const n = cells.items.len;
+    const matrix_buffer = try allocator.alloc(u1, n * (n));
+    defer allocator.free(matrix_buffer);
+    @memset(matrix_buffer, 0);
+
+    const expected = try allocator.alloc(u1, n);
+    defer allocator.free(expected);
+    const sol = try allocator.alloc(u1, n);
+    defer allocator.free(sol);
+    @memset(sol, 0);
+
+    var var_count: usize = n;
+    const best_sol = try allocator.alloc(u1, n);
+    @memset(best_sol, 1);
+
+    const matrix = try allocator.alloc([]u1, n);
+    defer allocator.free(matrix);
+    for (0..n) |row| {
+        const start = row * n;
+        const end = start + n;
+        matrix[row] = matrix_buffer[start..end];
     }
+
+    for (cells.items, 0..) |cell, index| {
+        expected[index] = switch (cell.state) {
+            .off => 1,
+            .on => 0,
+            .none => 0,
+        };
+        matrix[index][index] = 1;
+        for (cells.items, 0..) |c, i| {
+            if (cell.x - 1 == c.x and cell.y == c.y)
+                matrix[index][i] = 1;
+        }
+        for (cells.items, 0..) |c, i| {
+            if (cell.x == c.x and cell.y - 1 == c.y)
+                matrix[index][i] = 1;
+        }
+        for (cells.items, 0..) |c, i| {
+            if (cell.x + 1 == c.x and cell.y == c.y)
+                matrix[index][i] = 1;
+        }
+        for (cells.items, 0..) |c, i| {
+            if (cell.x == c.x and cell.y + 1 == c.y)
+                matrix[index][i] = 1;
+        }
+    }
+
+    //gaussian elimination
+    var h: usize = 0;
+    var k: usize = 0;
+    while (h < n and k < n) {
+        const first_row = blk: {
+            for (h..n) |row| {
+                if (matrix[row][k] == 1)
+                    break :blk row;
+            }
+            break :blk h;
+        };
+        if (matrix[first_row][k] == 0) {
+            k = k + 1;
+        } else {
+            const aux1 = matrix[h];
+            matrix[h] = matrix[first_row];
+            matrix[first_row] = aux1;
+            const aux2 = expected[h];
+            expected[h] = expected[first_row];
+            expected[first_row] = aux2;
+
+            for (h + 1..n) |row| {
+                if (matrix[row][k] == 1) {
+                    matrix[row][k] = 0;
+                    for (k + 1..n) |col| {
+                        matrix[row][col] = matrix[row][col] +% matrix[h][col];
+                    }
+                    expected[row] = expected[row] +% expected[h];
+                }
+            }
+
+            h = h + 1;
+            k = k + 1;
+        }
+    }
+
+    const free_vars: usize = blk: {
+        var row: usize = n;
+        while (row > 0) {
+            row -= 1;
+            for (row..n) |col| {
+                if (matrix[row][col] == 1)
+                    break :blk n - row - 1;
+            }
+        }
+        break :blk n;
+    };
+
+    //find solutions
+    const ways = std.math.pow(usize, 2, free_vars);
+    for (0..ways) |way| {
+        @memset(sol, 0);
+        var shift: usize = 1;
+        for (0..free_vars) |index| {
+            sol[n - index - 1] = if (way & shift != 0) 1 else 0;
+            shift = shift << 1;
+        }
+
+        var row: usize = n - free_vars;
+        while (row > 0) {
+            row -= 1;
+            var col = n;
+            while (col > row + 1) {
+                col -= 1;
+                if (matrix[row][col] == 1) {
+                    sol[row] +%= sol[col];
+                }
+            }
+            sol[row] +%= expected[row];
+        }
+
+        std.debug.print("solution #{d}: ", .{way + 1});
+        for (sol, 0..) |value, index| {
+            if (value == 1) {
+                std.debug.print("{d} ", .{index + 1});
+            }
+        }
+        std.debug.print("\n", .{});
+
+        var count: usize = 0;
+        for (sol) |value| {
+            count += value;
+        }
+        if (count < var_count) {
+            var_count = count;
+            @memcpy(best_sol, sol);
+        }
+    }
+
+    return best_sol;
 }
