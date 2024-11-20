@@ -80,6 +80,7 @@ const ParsedMatrix = struct {
         self.allocator.free(self.expected);
         self.allocator.free(self.matrix);
         self.allocator.free(self.buffer);
+        self.allocator.free(self.cells);
     }
 };
 

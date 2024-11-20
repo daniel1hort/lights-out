@@ -5,7 +5,13 @@ const State = @import("state.zig");
 const math = @import("math.zig");
 
 pub fn main() !void {
-    const allocator = std.heap.page_allocator;
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer {
+        if (gpa.deinit() == .leak)
+            @panic("memory leak");
+    }
+    const allocator = gpa.allocator();
+
     var state: State = .{};
     @memset(&state.map, .none);
 

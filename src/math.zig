@@ -42,8 +42,8 @@ pub fn gaussianElimination(
 }
 
 pub fn solveUpperTriangular(
-    matrix: [][]u1,
-    expected: []u1,
+    matrix: []const []const u1,
+    expected: []const u1,
     allocator: std.mem.Allocator,
     comptime options: struct { print_solutions: bool },
 ) ![]u1 {
@@ -120,7 +120,7 @@ fn contains(array: []const usize, to_find: usize) bool {
 }
 
 fn moveFreeVars(
-    matrix: [][]u1,
+    matrix: [][]const u1,
     expected: []u1,
 ) void {
     const n = expected.len;
