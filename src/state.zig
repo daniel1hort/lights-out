@@ -68,3 +68,78 @@ pub fn isHighlighted(self: Self, x: usize, y: usize) bool {
     }
     return false;
 }
+
+const ParsedMatrix = struct {
+    buffer: []u1,
+    matrix: [][]u1,
+    expected: []u1,
+    cells: []Cell,
+    allocator: std.mem.Allocator,
+
+    pub fn deinit(self: ParsedMatrix) void {
+        self.allocator.free(self.expected);
+        self.allocator.free(self.matrix);
+        self.allocator.free(self.buffer);
+    }
+};
+
+pub fn toMatrix(self: Self, allocator: std.mem.Allocator) !ParsedMatrix {
+    var cells = std.ArrayList(Cell).init(allocator);
+    for (0..map_size.y) |y| {
+        for (0..map_size.x) |x| {
+            const cell_state = self.get(x, y);
+            if (cell_state != .none) {
+                try cells.append(.{
+                    .state = cell_state,
+                    .x = x,
+                    .y = y,
+                });
+            }
+        }
+    }
+
+    const n = cells.items.len;
+    const matrix_buffer = try allocator.alloc(u1, n * (n));
+    const expected = try allocator.alloc(u1, n);
+    const matrix = try allocator.alloc([]u1, n);
+
+    @memset(matrix_buffer, 0);
+    for (0..n) |row| {
+        const start = row * n;
+        const end = start + n;
+        matrix[row] = matrix_buffer[start..end];
+    }
+
+    for (cells.items, 0..) |cell, index| {
+        expected[index] = switch (cell.state) {
+            .off => 1,
+            .on => 0,
+            .none => 0,
+        };
+        matrix[index][index] = 1;
+        for (cells.items, 0..) |c, i| {
+            if (cell.x - 1 == c.x and cell.y == c.y)
+                matrix[i][index] = 1;
+        }
+        for (cells.items, 0..) |c, i| {
+            if (cell.x == c.x and cell.y - 1 == c.y)
+                matrix[i][index] = 1;
+        }
+        for (cells.items, 0..) |c, i| {
+            if (cell.x + 1 == c.x and cell.y == c.y)
+                matrix[i][index] = 1;
+        }
+        for (cells.items, 0..) |c, i| {
+            if (cell.x == c.x and cell.y + 1 == c.y)
+                matrix[i][index] = 1;
+        }
+    }
+
+    return .{
+        .buffer = matrix_buffer,
+        .matrix = matrix,
+        .expected = expected,
+        .cells = try cells.toOwnedSlice(),
+        .allocator = allocator,
+    };
+}
