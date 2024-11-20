@@ -13,7 +13,12 @@ const Self = @This();
 pub const screen_size = rl.Vector2.init(1280, 720);
 pub const map_size = rl.Vector2.init(20, 20);
 pub const cell_size = rl.Vector2.init(40, 40);
-pub const ui_panel_bounds = rl.Rectangle.init(0, 0, 190, 180);
+pub const ui_panel_bounds = rl.Rectangle.init(
+    0,
+    0,
+    190,
+    260,
+);
 
 map: [map_size.x * map_size.y]CellState = undefined,
 camera: rl.Camera2D = .{
@@ -53,9 +58,9 @@ pub fn toggle(self: *Self, x: usize, y: usize) void {
 }
 
 pub fn isHighlighted(self: Self, x: usize, y: usize) bool {
-    if(self.highlights) |highlights| {
-        for(highlights) |cell|{
-            if(cell.x == x and cell.y == y)
+    if (self.highlights) |highlights| {
+        for (highlights) |cell| {
+            if (cell.x == x and cell.y == y)
                 return true;
         }
     } else {

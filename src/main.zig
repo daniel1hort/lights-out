@@ -88,10 +88,22 @@ pub fn main() !void {
                     .solve => {},
                 }
             }
+
+            if (rg.guiButton(
+                rl.Rectangle.init(20, 180, 150, 60),
+                "Clear",
+            ) != 0) {
+                @memset(&state.map, .none);
+                if (state.highlights) |highlights| {
+                    allocator.free(highlights);
+                    state.highlights = null;
+                }
+                state.step = .design;
+            }
         }
     }
 
-    if(state.highlights) |highlights|{
+    if (state.highlights) |highlights| {
         allocator.free(highlights);
     }
 }
@@ -234,19 +246,19 @@ fn solve(state: *State, allocator: std.mem.Allocator) ![]State.Cell {
         matrix[index][index] = 1;
         for (cells.items, 0..) |c, i| {
             if (cell.x - 1 == c.x and cell.y == c.y)
-                matrix[index][i] = 1;
+                matrix[i][index] = 1;
         }
         for (cells.items, 0..) |c, i| {
             if (cell.x == c.x and cell.y - 1 == c.y)
-                matrix[index][i] = 1;
+                matrix[i][index] = 1;
         }
         for (cells.items, 0..) |c, i| {
             if (cell.x + 1 == c.x and cell.y == c.y)
-                matrix[index][i] = 1;
+                matrix[i][index] = 1;
         }
         for (cells.items, 0..) |c, i| {
             if (cell.x == c.x and cell.y + 1 == c.y)
-                matrix[index][i] = 1;
+                matrix[i][index] = 1;
         }
     }
 
@@ -284,6 +296,13 @@ fn solve(state: *State, allocator: std.mem.Allocator) ![]State.Cell {
             h = h + 1;
             k = k + 1;
         }
+    }
+
+    for (0..n) |row| {
+        for (0..n) |col| {
+            std.debug.print("{d} ", .{matrix[row][col]});
+        }
+        std.debug.print("| {d}\n", .{expected[row]});
     }
 
     const free_vars: usize = blk: {
