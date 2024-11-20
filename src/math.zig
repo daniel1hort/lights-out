@@ -37,6 +37,8 @@ pub fn gaussianElimination(
             k = k + 1;
         }
     }
+
+    moveFreeVars(matrix, expected);
 }
 
 pub fn solveUpperTriangular(
@@ -46,7 +48,12 @@ pub fn solveUpperTriangular(
     comptime options: struct { print_solutions: bool },
 ) ![]u1 {
     const n = expected.len;
-    const free_vars = countFreeVars(matrix, n);
+    const free_vars = try getFreeVars(
+        matrix,
+        n,
+        allocator,
+    );
+    defer allocator.free(free_vars);
 
     var var_count: usize = n;
     const best_sol = try allocator.alloc(u1, n);
@@ -56,18 +63,21 @@ pub fn solveUpperTriangular(
     defer allocator.free(sol);
     @memset(sol, 0);
 
-    const ways = std.math.pow(usize, 2, free_vars);
+    const ways = std.math.pow(usize, 2, free_vars.len);
     for (0..ways) |way| {
         @memset(sol, 0);
         var shift: usize = 1;
-        for (0..free_vars) |index| {
-            sol[n - index - 1] = if (way & shift != 0) 1 else 0;
+        for (free_vars) |index| {
+            sol[index] = if (way & shift != 0) 1 else 0;
             shift = shift << 1;
         }
 
-        var row: usize = n - free_vars;
+        var row: usize = n;
         while (row > 0) {
             row -= 1;
+            if (contains(free_vars, row))
+                continue;
+
             var col = n;
             while (col > row + 1) {
                 col -= 1;
@@ -101,16 +111,48 @@ pub fn solveUpperTriangular(
     return best_sol;
 }
 
-fn countFreeVars(matrix: []const []const u1, n: usize) usize {
-    var row: usize = n;
+fn contains(array: []const usize, to_find: usize) bool {
+    for (array) |el| {
+        if (el == to_find)
+            return true;
+    }
+    return false;
+}
+
+fn moveFreeVars(
+    matrix: [][]u1,
+    expected: []u1,
+) void {
+    const n = expected.len;
+    var row = n;
     while (row > 0) {
         row -= 1;
-        for (row..n) |col| {
-            if (matrix[row][col] == 1)
-                return n - row - 1;
+        for (0..n) |col| {
+            if (matrix[row][col] == 1) {
+                if (row != col) {
+                    swap(&matrix[row], &matrix[col]);
+                    swap(&expected[row], &expected[col]);
+                }
+                break;
+            }
         }
     }
-    return n;
+}
+
+fn getFreeVars(
+    matrix: []const []const u1,
+    n: usize,
+    allocator: std.mem.Allocator,
+) ![]usize {
+    var idx = std.ArrayList(usize).init(allocator);
+    loop: for (0..n) |row| {
+        for (row..n) |col| {
+            if (matrix[row][col] == 1)
+                continue :loop;
+        }
+        try idx.append(row);
+    }
+    return try idx.toOwnedSlice();
 }
 
 fn swap(a: anytype, b: @TypeOf(a)) void {
