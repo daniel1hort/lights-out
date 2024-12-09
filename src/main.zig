@@ -12,6 +12,10 @@ pub fn main() !void {
     }
     const allocator = gpa.allocator();
 
+    try game(allocator);
+}
+
+fn game(allocator: std.mem.Allocator) !void {
     var state: State = .{};
     @memset(&state.map, .none);
 
