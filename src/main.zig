@@ -194,11 +194,17 @@ fn onGridClick(state: *State) void {
             },
             .play => {
                 if (state.get(x, y) != .none) {
+                    const fx: f32 = @floatFromInt(x);
+                    const fy: f32 = @floatFromInt(y);
                     state.toggle(x, y);
-                    state.toggle(x - 1, y);
-                    state.toggle(x, y - 1);
-                    state.toggle(x + 1, y);
-                    state.toggle(x, y + 1);
+                    if (state.withinBounds(fx - 1, fy))
+                        state.toggle(x - 1, y);
+                    if (state.withinBounds(fx, fy - 1))
+                        state.toggle(x, y - 1);
+                    if (state.withinBounds(fx + 1, fy))
+                        state.toggle(x + 1, y);
+                    if (state.withinBounds(fx, fy + 1))
+                        state.toggle(x, y + 1);
                 }
             },
             .solve => {},
@@ -217,11 +223,13 @@ fn solve(state: *State, allocator: std.mem.Allocator) ![]State.Cell {
 
     math.gaussianElimination(matrix, expected);
 
-    for (0..n) |row| {
-        for (0..n) |col| {
-            std.debug.print("{d} ", .{matrix[row][col]});
+    if (n < 30) {
+        for (0..n) |row| {
+            for (0..n) |col| {
+                std.debug.print("{d} ", .{matrix[row][col]});
+            }
+            std.debug.print("| {d}\n", .{expected[row]});
         }
-        std.debug.print("| {d}\n", .{expected[row]});
     }
 
     const best_sol = try math.solveUpperTriangular(

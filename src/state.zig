@@ -119,19 +119,15 @@ pub fn toMatrix(self: Self, allocator: std.mem.Allocator) !ParsedMatrix {
         };
         matrix[index][index] = 1;
         for (cells.items, 0..) |c, i| {
-            if (cell.x - 1 == c.x and cell.y == c.y)
+            const fx: f32 = @floatFromInt(cell.x);
+            const fy: f32 = @floatFromInt(cell.y);
+            if (self.withinBounds(fx - 1, fy) and cell.x - 1 == c.x and cell.y == c.y)
                 matrix[i][index] = 1;
-        }
-        for (cells.items, 0..) |c, i| {
-            if (cell.x == c.x and cell.y - 1 == c.y)
+            if (self.withinBounds(fx, fy - 1) and cell.x == c.x and cell.y - 1 == c.y)
                 matrix[i][index] = 1;
-        }
-        for (cells.items, 0..) |c, i| {
-            if (cell.x + 1 == c.x and cell.y == c.y)
+            if (self.withinBounds(fx + 1, fy) and cell.x + 1 == c.x and cell.y == c.y)
                 matrix[i][index] = 1;
-        }
-        for (cells.items, 0..) |c, i| {
-            if (cell.x == c.x and cell.y + 1 == c.y)
+            if (self.withinBounds(fx, fy + 1) and cell.x == c.x and cell.y + 1 == c.y)
                 matrix[i][index] = 1;
         }
     }
