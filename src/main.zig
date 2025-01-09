@@ -184,7 +184,7 @@ fn onGridClick(state: *State) void {
 
     const index = pos.subtract(origin).scale(1.0 / State.cell_size.x);
     const over_panel = rl.checkCollisionPointRec(state.mouse_pos, State.ui_panel_bounds);
-    if (state.withinBounds(index.x, index.y) and !over_panel) {
+    if (State.withinBounds(index.x, index.y, State.map_size) and !over_panel) {
         const x: usize = @intFromFloat(index.x);
         const y: usize = @intFromFloat(index.y);
         switch (state.step) {
@@ -201,13 +201,13 @@ fn onGridClick(state: *State) void {
                     const fx: f32 = @floatFromInt(x);
                     const fy: f32 = @floatFromInt(y);
                     state.toggle(x, y);
-                    if (state.withinBounds(fx - 1, fy))
+                    if (State.withinBounds(fx - 1, fy, State.map_size))
                         state.toggle(x - 1, y);
-                    if (state.withinBounds(fx, fy - 1))
+                    if (State.withinBounds(fx, fy - 1, State.map_size))
                         state.toggle(x, y - 1);
-                    if (state.withinBounds(fx + 1, fy))
+                    if (State.withinBounds(fx + 1, fy, State.map_size))
                         state.toggle(x + 1, y);
-                    if (state.withinBounds(fx, fy + 1))
+                    if (State.withinBounds(fx, fy + 1, State.map_size))
                         state.toggle(x, y + 1);
                 }
             },

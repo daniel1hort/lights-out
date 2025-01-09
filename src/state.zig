@@ -31,22 +31,20 @@ mouse_pos: rl.Vector2 = undefined,
 step: Step = .design,
 highlights: ?[]Cell = null,
 
-pub fn withinBounds(self: Self, x: f32, y: f32) bool {
-    _ = self;
-    return x >= 0 and x < map_size.x and y >= 0 and y < map_size.y;
+pub fn withinBounds(x: f32, y: f32, size: rl.Vector2) bool {
+    return x >= 0 and x < size.x and y >= 0 and y < size.y;
 }
 
-pub fn indexAt(self: Self, x: usize, y: usize) usize {
-    _ = self;
+pub fn indexAt(x: usize, y: usize) usize {
     return y * @as(usize, @intFromFloat(map_size.x)) + x;
 }
 
 pub fn set(self: *Self, x: usize, y: usize, value: CellState) void {
-    self.map[self.indexAt(x, y)] = value;
+    self.map[indexAt(x, y)] = value;
 }
 
 pub fn get(self: Self, x: usize, y: usize) CellState {
-    return self.map[self.indexAt(x, y)];
+    return self.map[indexAt(x, y)];
 }
 
 pub fn toggle(self: *Self, x: usize, y: usize) void {
@@ -121,13 +119,13 @@ pub fn toMatrix(self: Self, allocator: std.mem.Allocator) !ParsedMatrix {
         for (cells.items, 0..) |c, i| {
             const fx: f32 = @floatFromInt(cell.x);
             const fy: f32 = @floatFromInt(cell.y);
-            if (self.withinBounds(fx - 1, fy) and cell.x - 1 == c.x and cell.y == c.y)
+            if (withinBounds(fx - 1, fy, map_size) and cell.x - 1 == c.x and cell.y == c.y)
                 matrix[i][index] = 1;
-            if (self.withinBounds(fx, fy - 1) and cell.x == c.x and cell.y - 1 == c.y)
+            if (withinBounds(fx, fy - 1, map_size) and cell.x == c.x and cell.y - 1 == c.y)
                 matrix[i][index] = 1;
-            if (self.withinBounds(fx + 1, fy) and cell.x + 1 == c.x and cell.y == c.y)
+            if (withinBounds(fx + 1, fy, map_size) and cell.x + 1 == c.x and cell.y == c.y)
                 matrix[i][index] = 1;
-            if (self.withinBounds(fx, fy + 1) and cell.x == c.x and cell.y + 1 == c.y)
+            if (withinBounds(fx, fy + 1, map_size) and cell.x == c.x and cell.y + 1 == c.y)
                 matrix[i][index] = 1;
         }
     }
